@@ -1,0 +1,100 @@
+#include "implementation.oil"
+
+CPU ATMEL_AT91SAM7S256
+{
+	OS LEJOS_OSEK
+	{
+		STATUS = EXTENDED;
+		STARTUPHOOK = FALSE;
+		ERRORHOOK = FALSE;
+		SHUTDOWNHOOK = FALSE;
+		PRETASKHOOK = FALSE;
+		POSTTASKHOOK = FALSE;
+		USEGETSERVICEID = FALSE;
+		USEPARAMETERACCESS = FALSE;
+		USERESSCHEDULER = FALSE;
+	};
+
+	APPMODE appmode1{};
+
+	TASK ActionTask
+	{
+		AUTOSTART = FALSE;
+		SCHEDULE = FULL;
+		PRIORITY = 1;
+		ACTIVATION = 1;
+		STACKSIZE = 512;
+	};
+
+	ALARM OSEK_Alarm_task_ts1
+	{
+		COUNTER = SysTimerCnt;
+		ACTION = ACTIVATETASK
+		{
+			TASK = ActionTask;
+		};
+		AUTOSTART = TRUE
+		{
+			APPMODE = appmode1;
+			ALARMTIME = 1;
+			CYCLETIME = 4;
+		};
+	};
+
+	TASK DisplayTask
+	{
+		AUTOSTART = FALSE;
+		SCHEDULE = FULL;
+		PRIORITY = 3;
+		ACTIVATION = 1;
+		STACKSIZE = 512;
+	};
+
+	ALARM OSEK_Alarm_task_ts2
+	{
+		COUNTER = SysTimerCnt;
+		ACTION = ACTIVATETASK
+		{
+			TASK = DisplayTask;
+		};
+		AUTOSTART = TRUE
+		{
+			APPMODE = appmode1;
+			ALARMTIME = 1;
+			CYCLETIME = 500;
+		};
+	};
+
+	TASK TouchSensorTask
+	{
+		AUTOSTART = FALSE;
+		SCHEDULE = FULL;
+		PRIORITY = 2;
+		ACTIVATION = 1;
+		STACKSIZE = 512;
+	};
+
+	ALARM OSEK_Alarm_task_ts3
+	{
+		COUNTER = SysTimerCnt;
+		ACTION = ACTIVATETASK
+		{
+			TASK = TouchSensorTask;
+		};
+		AUTOSTART = TRUE
+		{
+			APPMODE = appmode1;
+			ALARMTIME = 1;
+			CYCLETIME = 20;
+		};
+	};
+
+	/* Definition of OSEK Alarm counter: SysTimerCnt */
+	COUNTER SysTimerCnt
+	{
+		MINCYCLE = 1;
+		MAXALLOWEDVALUE = 10000;
+		TICKSPERBASE = 1;
+	};
+
+};
