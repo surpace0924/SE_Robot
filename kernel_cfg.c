@@ -1,6 +1,6 @@
 /*
  *  kernel_cfg.c
- *  Wed Jan 09 14:52:21 2019
+ *  Wed Jan 23 14:36:08 2019
  *  SG Version 2.00
  *  sg.exe ./prog.oil -os=ECC2 -I../ecrobot/../toppers_osek/sg/impl_oil -template=../ecrobot/../toppers_osek/sg/lego_nxt.sgt
  */
