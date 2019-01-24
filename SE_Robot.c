@@ -9,6 +9,9 @@
 #define PORT_SENSE_BIT NXT_PORT_S1
 
 // 各種定数
+#define KP 0.0
+#define KI 0.0
+#define KD 0.0
 #define M_PI 3.1415926535
 #define K_ANGLE_CORRECT 0.93994778067
 #define LINE_SENSOR_TH 600
@@ -20,9 +23,9 @@ U8 is_line = 1;
 U8 is_discovered = 0;
 
 // データ変数
-float mt_n_L = 0;
-float mt_n_R = 0;
-float robot_angle = 0;
+F32 mt_n_L = 0;
+F32 mt_n_R = 0;
+F32 robot_angle = 0;
 
 // 関数宣言
 void lineTrace(U8 is_line, U8 line_side, U32 duty_h, U32 duty_l);
@@ -77,7 +80,7 @@ TASK(TouchSensorTask)
 
 TASK(ActionTask)
 {
-    static float dt = 0.004;
+    static F32 dt = 0.004;
     U32 duty_h = 70;
     U32 duty_l = 50;
 
@@ -181,3 +184,77 @@ void appeal()
     else
         nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
 }
+
+static S32 deff[2];
+static F32 integral;
+F32 calPID(U16 sensor_val, U16 target_val)
+{
+    F32 p, i, d;
+
+    deff[0] = deff[1];
+    deff[1] = sensor_val - target_val;
+    indtegral += (deff[0] + deff[1]) / dt;
+
+    p = KP * deff[1];
+    i = KI * integral;
+    d = (deff[1] - deff[0]) / dt;
+
+    return p + i + d;
+}
+
+// void balance_control(F32 args_cmd_forward, F32 args_cmd_turn, F32 args_gyro,
+//                      F32 args_gyro_offset, F32 args_theta_m_l, F32 args_theta_m_r,
+//                      F32 args_battery, S8 *ret_pwm_l, S8 *ret_pwm_r)
+// {
+//     {
+//         F32 tmp_theta;
+//         F32 tmp_theta_lpf;
+//         F32 tmp_pwm_r_limiter;
+//         F32 tmp_psidot;
+//         F32 tmp_pwm_turn;
+//         F32 tmp_pwm_l_limiter;
+//         F32 tmp_thetadot_cmd_lpf;
+//         F32 tmp[4];
+//         F32 tmp_theta_0[4];
+//         S32 tmp_0;
+//         tmp_thetadot_cmd_lpf = (((args_cmd_forward / CMD_MAX) * K_THETADOT) * (1.0F - A_R)) + (A_R * ud_thetadot_cmd_lpf);
+//         tmp_theta = (((DEG2RAD * args_theta_m_l) + ud_psi) + ((DEG2RAD *
+//                                                                args_theta_m_r) +
+//                                                               ud_psi)) *
+//                     0.5F;
+//         tmp_theta_lpf = ((1.0F - A_D) * tmp_theta) + (A_D * ud_theta_lpf);
+//         tmp_psidot = (args_gyro - args_gyro_offset) * DEG2RAD;
+//         tmp[0] = ud_theta_ref;
+//         tmp[1] = 0.0F;
+//         tmp[2] = tmp_thetadot_cmd_lpf;
+//         tmp[3] = 0.0F;
+//         tmp_theta_0[0] = tmp_theta;
+//         tmp_theta_0[1] = ud_psi;
+//         tmp_theta_0[2] = (tmp_theta_lpf - ud_theta_lpf) / EXEC_PERIOD;
+//         tmp_theta_0[3] = tmp_psidot;
+//         tmp_pwm_r_limiter = 0.0F;
+//         for (tmp_0 = 0; tmp_0 < 4; tmp_0++)
+//         {
+//             tmp_pwm_r_limiter += (tmp[tmp_0] - tmp_theta_0[tmp_0]) * K_F[(tmp_0)];
+//         }
+//         tmp_pwm_r_limiter = (((K_I * ud_err_theta) + tmp_pwm_r_limiter) /
+//                              ((BATTERY_GAIN * args_battery) - BATTERY_OFFSET)) *
+//                             100.0F;
+//         tmp_pwm_turn = (args_cmd_turn / CMD_MAX) * K_PHIDOT;
+//         tmp_pwm_l_limiter = tmp_pwm_r_limiter + tmp_pwm_turn;
+//         tmp_pwm_l_limiter = rt_SATURATE(tmp_pwm_l_limiter, -100.0F, 100.0F);
+//         (*ret_pwm_l) = (S8)tmp_pwm_l_limiter;
+//         tmp_pwm_r_limiter -= tmp_pwm_turn;
+//         tmp_pwm_r_limiter = rt_SATURATE(tmp_pwm_r_limiter, -100.0F, 100.0F);
+//         (*ret_pwm_r) = (S8)tmp_pwm_r_limiter;
+//         tmp_pwm_l_limiter = (EXEC_PERIOD * tmp_thetadot_cmd_lpf) + ud_theta_ref;
+//         tmp_pwm_turn = (EXEC_PERIOD * tmp_psidot) + ud_psi;
+//         tmp_pwm_r_limiter = ((ud_theta_ref - tmp_theta) * EXEC_PERIOD) + ud_err_theta;
+//         /* 次回演算用状態量保存処理 */
+//         ud_err_theta = tmp_pwm_r_limiter;
+//         ud_theta_ref = tmp_pwm_l_limiter;
+//         ud_thetadot_cmd_lpf = tmp_thetadot_cmd_lpf;
+//         ud_psi = tmp_pwm_turn;
+//         ud_theta_lpf = tmp_theta_lpf;
+//     }
+// }
