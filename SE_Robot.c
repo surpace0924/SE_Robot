@@ -21,6 +21,7 @@ const char target_subsystem_name[] = "OSEK SE_Robot";
 U8 clip_num = 0;
 U8 is_line = 1;
 U8 is_discovered = 0;
+U8 is_returned = 0;
 U8 sound_flag = 0;
 U8 sound_clip = 0;
 U8 flag_num = 0;
@@ -31,12 +32,12 @@ F32 mt_n_L = 0;
 F32 mt_n_R = 0;
 F32 robot_angle = 0;
 
-
-
 // 関数宣言
 void lineTrace(U8 is_line, U8 line_side, U32 duty_h, U32 duty_l);
 void appeal();
-F32 calPID(U16 sensor_val, U16 target_val, F32 dt);
+void controlFlag();
+void controlSound();
+int soundUnsync(U32 freq, U32 ms, U32 vol);
 
 void ecrobot_device_initialize(void)
 {
@@ -102,7 +103,7 @@ TASK(ActionTask)
     mt_n_R = nxt_motor_get_count(PORT_R_MT) / 360.;
 
     // 自己角度推定
-    robot_angle = K_ANGLE_CORRECT * 180 * (55/2) / 52 * (mt_n_R - mt_n_L);
+    robot_angle = K_ANGLE_CORRECT * 180 * (55 / 2) / 52 * (mt_n_R - mt_n_L);
 
     // 移動のシーケンス
     switch (clip_num)
@@ -129,16 +130,26 @@ TASK(ActionTask)
         is_discovered = 1;
         nxt_motor_set_speed(PORT_R_MT, 70, 0);
         nxt_motor_set_speed(PORT_L_MT, -70, 0);
-        // robot_angle = K_ANGLE_CORRECT * 180 * 40.8 / 52 * (mt_n_R - mt_n_L);
 
         if (robot_angle > -90)
             clip_num++;
         break;
 
     // ライントレースで帰る
-    // 次シーケンス遷移トリガ: なし
+    // 次シーケンス遷移トリガ: 車体角度が-5deg未満
     case 3:
         lineTrace(is_line, 1, duty_h, duty_l);
+
+        if (robot_angle < -5)
+            clip_num++;
+        break;
+
+    // 全速力で直進
+    // 次シーケンス遷移トリガ: なし
+    case 4:
+        is_returned = 1;
+        nxt_motor_set_speed(PORT_R_MT, 100, 0);
+        nxt_motor_set_speed(PORT_L_MT, 100, 0);
         break;
 
     default:
@@ -148,7 +159,27 @@ TASK(ActionTask)
     // 発見したらアピール（移動とは非同期）
     if (is_discovered)
     {
-        appeal();
+        // 障害物発見後
+        controlSound();
+
+        if (!is_returned)
+        {
+            // 障害物発見後
+            // 旗を揚げる
+            if (nxt_motor_get_count(PORT_FLAG_MT) < 620)
+                nxt_motor_set_speed(PORT_FLAG_MT, 80, 0);
+            else
+                nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
+        }
+        else
+        {
+            // 最後の直線侵入後
+            // 旗を降ろす
+            if (nxt_motor_get_count(PORT_FLAG_MT) > 0)
+                nxt_motor_set_speed(PORT_FLAG_MT, -80, 0);
+            else
+                nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
+        }
     }
 
     TerminateTask();
@@ -164,7 +195,6 @@ void lineTrace(U8 is_line, U8 line_side, U32 duty_h, U32 duty_l)
         {
             nxt_motor_set_speed(PORT_R_MT, duty_l, 0);
             nxt_motor_set_speed(PORT_L_MT, duty_h, 0);
-
         }
         else
         {
@@ -187,205 +217,134 @@ void lineTrace(U8 is_line, U8 line_side, U32 duty_h, U32 duty_l)
     }
 }
 
-int saund_num = 0;
-int sound(U32 freq, U32 ms, U32 vol)
+void appeal()
 {
-    int do_next = 0;
+}
+
+void controlFlag()
+{
+}
+
+void controlSound()
+{
+    if (sound_flag == 0)
+    {
+        switch (sound_clip)
+        {
+        case 0:
+            sound_clip += sound(196, 170, 100); // ソ
+            break;
+        case 1:
+            sound_clip += sound(262, 170, 100); // ド
+            break;
+        case 2:
+            sound_clip += sound(330, 170, 100); // ミ
+            break;
+        case 3:
+            sound_clip += sound(392, 170, 100); // ソ
+            break;
+        case 4:
+            sound_clip += sound(523, 170, 100); // ド
+            break;
+        case 5:
+            sound_clip += sound(659, 170, 100); // ミ
+            break;
+        case 6:
+            sound_clip += sound(784, 510, 100); // ソ
+            break;
+        case 7:
+            sound_clip += sound(659, 510, 100); // ミ
+            break;
+        case 8:
+            sound_clip += sound(208, 170, 100); // ラ♭
+            break;
+        case 9:
+            sound_clip += sound(262, 170, 100); // ド
+            break;
+        case 10:
+            sound_clip += sound(311, 170, 100); // ミ♭
+            break;
+        case 11:
+            sound_clip += sound(415, 170, 100); // ラ♭
+            break;
+        case 12:
+            sound_clip += sound(523, 170, 100); // ド
+            break;
+        case 13:
+            sound_clip += sound(622, 170, 100); // ミ♭♭
+            break;
+        case 14:
+            sound_clip += sound(831, 510, 100); // ラ♭
+            break;
+        case 15:
+            sound_clip += sound(622, 510, 100); // ミ
+            break;
+        case 16:
+            sound_clip += sound(233, 170, 100); // シ
+            break;
+        case 17:
+            sound_clip += sound(294, 170, 100); // レ
+            break;
+        case 18:
+            sound_clip += sound(349, 170, 100); // ファ
+            break;
+        case 19:
+            sound_clip += sound(466, 170, 100); // シ♭
+            break;
+        case 20:
+            sound_clip += sound(587, 170, 100); // レ
+            break;
+        case 21:
+            sound_clip += sound(698, 170, 100); // ファ
+            break;
+        case 22:
+            sound_clip += sound(932, 510 - 85, 100); // シ♭
+            break;
+        case 23:
+            sound_clip += sound(932, 85, 0); // 休符
+            break;
+        case 24:
+            sound_clip += sound(932, 170, 100); // シ♭
+            break;
+        case 25:
+            sound_clip += sound(932, 85, 0); // 休符
+            break;
+        case 26:
+            sound_clip += sound(932, 85, 100); // シ♭
+            break;
+        case 27:
+            sound_clip += sound(932, 85, 0); // 休符
+            break;
+        case 28:
+            sound_clip += sound(932, 85, 100); // シ♭
+            break;
+        case 29:
+            sound_clip += sound(932, 85, 0); // 休符
+            break;
+        case 30:
+            sound_clip += sound(1047, 2040, 100); // ド
+            break;
+        default:
+            sound_flag = 1;
+            break;
+        }
+    }
+}
+
+int soundUnsync(U32 freq, U32 ms, U32 vol)
+{
+    static int sound_num = 0; // 関数に入った回数
+    sound_num++;
+    int do_next = 0; // 規定時間鳴らし終わったかどうか
+
     ecrobot_sound_tone(freq, 4, vol);
 
-    saund_num++;
-
-    if(saund_num*4 > ms)
+    if (sound_num * 4 > ms)
     {
-        saund_num = 0;
+        // 規定時間鳴らし終わった
+        sound_num = 0;
         do_next = 1;
     }
 
     return do_next;
 }
-
-
-void appeal()
-{
-  if(sound_flag == 0)
-  {
-    switch (sound_clip)
-    {
-      case 0:
-          sound_clip += sound(196, 170, 100);    // ソ
-          break;
-      case 1:
-          sound_clip += sound(262, 170, 100);    // ド
-          break;
-      case 2:
-          sound_clip += sound(330, 170, 100);    // ミ
-          break;
-      case 3:
-          sound_clip += sound(392, 170, 100);    // ソ
-          break;
-      case 4:
-          sound_clip += sound(523, 170, 100);    // ド
-          break;
-      case 5:
-          sound_clip += sound(659, 170, 100);    // ミ
-          break;
-      case 6:
-          sound_clip += sound(784, 510, 100);    // ソ
-          break;
-      case 7:
-          sound_clip += sound(659, 510, 100);    // ミ
-          break;
-      case 8:
-          sound_clip += sound(208, 170, 100);    // ラ♭
-          break;
-      case 9:
-          sound_clip += sound(262, 170, 100);    // ド
-          break;
-      case 10:
-          sound_clip += sound(311, 170, 100);    // ミ♭
-          break;
-      case 11:
-          sound_clip += sound(415, 170, 100);    // ラ♭
-          break;
-      case 12:
-          sound_clip += sound(523, 170, 100);    // ド
-          break;
-      case 13:
-          sound_clip += sound(622, 170, 100);    // ミ♭♭
-          break;
-      case 14:
-          sound_clip += sound(831, 510, 100);    // ラ♭
-          break;
-      case 15:
-          sound_clip += sound(622, 510, 100);    // ミ
-          break;
-      case 16:
-          sound_clip += sound(233, 170, 100);    // シ
-          break;
-      case 17:
-          sound_clip += sound(294, 170, 100);    // レ
-          break;
-      case 18:
-          sound_clip += sound(349, 170, 100);    // ファ
-          break;
-      case 19:
-          sound_clip += sound(466, 170, 100);    // シ♭
-          break;
-      case 20:
-          sound_clip += sound(587, 170, 100);    // レ
-          break;
-      case 21:
-          sound_clip += sound(698, 170, 100);    // ファ
-          break;
-      case 22:
-          sound_clip += sound(932, 510-85, 100);    // シ♭
-          break;
-      case 23:
-          sound_clip += sound(932, 85, 0);    // 休符
-          break;
-      case 24:
-          sound_clip += sound(932, 170, 100);    // シ♭
-          break;
-      case 25:
-          sound_clip += sound(932, 85, 0);    // 休符
-          break;
-      case 26:
-          sound_clip += sound(932, 85, 100);    // シ♭
-          break;
-      case 27:
-          sound_clip += sound(932, 85, 0);    // 休符
-          break;
-      case 28:
-          sound_clip += sound(932, 85, 100);    // シ♭
-          break;
-      case 29:
-          sound_clip += sound(932, 85, 0);    // 休符
-          break;
-      case 30:
-          sound_clip += sound(1047,2040, 100);  // ド
-          break;
-      default:
-          sound_flag = 1;
-          break;
-    }
-  }
-
-    if (nxt_motor_get_count(PORT_FLAG_MT) < 620)
-        nxt_motor_set_speed(PORT_FLAG_MT, 80, 0);
-    else
-        nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
-}
-
-static S32 deff[2];
-static F32 integral;
-F32 calPID(U16 sensor_val, U16 target_val, F32 dt)
-{
-    F32 p, i, d;
-
-    deff[0] = deff[1];
-    deff[1] = sensor_val - target_val;
-    integral += (deff[0] + deff[1]) / dt;
-
-    p = KP * deff[1];
-    i = KI * integral;
-    d = (deff[1] - deff[0]) / dt;
-
-    return p + i + d;
-}
-
-// void balance_control(F32 args_cmd_forward, F32 args_cmd_turn, F32 args_gyro,
-//                      F32 args_gyro_offset, F32 args_theta_m_l, F32 args_theta_m_r,
-//                      F32 args_battery, S8 *ret_pwm_l, S8 *ret_pwm_r)
-// {
-//     {
-//         F32 tmp_theta;
-//         F32 tmp_theta_lpf;
-//         F32 tmp_pwm_r_limiter;
-//         F32 tmp_psidot;
-//         F32 tmp_pwm_turn;
-//         F32 tmp_pwm_l_limiter;
-//         F32 tmp_thetadot_cmd_lpf;
-//         F32 tmp[4];
-//         F32 tmp_theta_0[4];
-//         S32 tmp_0;
-//         tmp_thetadot_cmd_lpf = (((args_cmd_forward / CMD_MAX) * K_THETADOT) * (1.0F - A_R)) + (A_R * ud_thetadot_cmd_lpf);
-//         tmp_theta = (((DEG2RAD * args_theta_m_l) + ud_psi) + ((DEG2RAD *
-//                                                                args_theta_m_r) +
-//                                                               ud_psi)) *
-//                     0.5F;
-//         tmp_theta_lpf = ((1.0F - A_D) * tmp_theta) + (A_D * ud_theta_lpf);
-//         tmp_psidot = (args_gyro - args_gyro_offset) * DEG2RAD;
-//         tmp[0] = ud_theta_ref;
-//         tmp[1] = 0.0F;
-//         tmp[2] = tmp_thetadot_cmd_lpf;
-//         tmp[3] = 0.0F;
-//         tmp_theta_0[0] = tmp_theta;
-//         tmp_theta_0[1] = ud_psi;
-//         tmp_theta_0[2] = (tmp_theta_lpf - ud_theta_lpf) / EXEC_PERIOD;
-//         tmp_theta_0[3] = tmp_psidot;
-//         tmp_pwm_r_limiter = 0.0F;
-//         for (tmp_0 = 0; tmp_0 < 4; tmp_0++)
-//         {
-//             tmp_pwm_r_limiter += (tmp[tmp_0] - tmp_theta_0[tmp_0]) * K_F[(tmp_0)];
-//         }
-//         tmp_pwm_r_limiter = (((K_I * ud_err_theta) + tmp_pwm_r_limiter) /
-//                              ((BATTERY_GAIN * args_battery) - BATTERY_OFFSET)) *
-//                             100.0F;
-//         tmp_pwm_turn = (args_cmd_turn / CMD_MAX) * K_PHIDOT;
-//         tmp_pwm_l_limiter = tmp_pwm_r_limiter + tmp_pwm_turn;
-//         tmp_pwm_l_limiter = rt_SATURATE(tmp_pwm_l_limiter, -100.0F, 100.0F);
-//         (*ret_pwm_l) = (S8)tmp_pwm_l_limiter;
-//         tmp_pwm_r_limiter -= tmp_pwm_turn;
-//         tmp_pwm_r_limiter = rt_SATURATE(tmp_pwm_r_limiter, -100.0F, 100.0F);
-//         (*ret_pwm_r) = (S8)tmp_pwm_r_limiter;
-//         tmp_pwm_l_limiter = (EXEC_PERIOD * tmp_thetadot_cmd_lpf) + ud_theta_ref;
-//         tmp_pwm_turn = (EXEC_PERIOD * tmp_psidot) + ud_psi;
-//         tmp_pwm_r_limiter = ((ud_theta_ref - tmp_theta) * EXEC_PERIOD) + ud_err_theta;
-//         /* 次回演算用状態量保存処理 */
-//         ud_err_theta = tmp_pwm_r_limiter;
-//         ud_theta_ref = tmp_pwm_l_limiter;
-//         ud_thetadot_cmd_lpf = tmp_thetadot_cmd_lpf;
-//         ud_psi = tmp_pwm_turn;
-//         ud_theta_lpf = tmp_theta_lpf;
-//     }
-// }
