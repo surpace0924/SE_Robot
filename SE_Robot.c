@@ -14,7 +14,7 @@
 #define KD 0.0
 #define M_PI 3.1415926535
 #define K_ANGLE_CORRECT 1 //0.93994778067
-#define LINE_SENSOR_TH 500
+#define LINE_SENSOR_TH 550
 const char target_subsystem_name[] = "OSEK SE_Robot";
 
 // フラグ変数
@@ -92,7 +92,7 @@ TASK(ActionTask)
 {
     static F32 dt = 0.004;
     U32 duty_h = 85;
-    U32 duty_l = 25;
+    U32 duty_l = 35;
 
     // センサの値処理（２値化）
     ls_val = ecrobot_get_light_sensor(PORT_LINE_SENS);
@@ -128,10 +128,10 @@ TASK(ActionTask)
     // 次シーケンス遷移トリガ: 角度収束
     case 2:
         is_discovered = 1;
-        nxt_motor_set_speed(PORT_R_MT, 70, 0);
-        nxt_motor_set_speed(PORT_L_MT, -70, 0);
+        nxt_motor_set_speed(PORT_R_MT, 80, 0);
+        nxt_motor_set_speed(PORT_L_MT, -80, 0);
 
-        if (robot_angle > -90)
+        if (robot_angle > -100)
             clip_num++;
         break;
 
@@ -140,7 +140,7 @@ TASK(ActionTask)
     case 3:
         lineTrace(is_line, 1, duty_h, duty_l);
 
-        if (robot_angle < -5)
+        if (robot_angle > 180)
             clip_num++;
         break;
 
@@ -167,7 +167,7 @@ TASK(ActionTask)
             // 障害物発見後
             // 旗を揚げる
             if (nxt_motor_get_count(PORT_FLAG_MT) < 620)
-                nxt_motor_set_speed(PORT_FLAG_MT, 80, 0);
+                nxt_motor_set_speed(PORT_FLAG_MT, 70, 0);
             else
                 nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
         }
@@ -175,7 +175,7 @@ TASK(ActionTask)
         {
             // 最後の直線侵入後
             // 旗を降ろす
-            if (nxt_motor_get_count(PORT_FLAG_MT) > 0)
+            if (nxt_motor_get_count(PORT_FLAG_MT) > 25)
                 nxt_motor_set_speed(PORT_FLAG_MT, -80, 0);
             else
                 nxt_motor_set_speed(PORT_FLAG_MT, 0, 1);
@@ -232,97 +232,97 @@ void controlSound()
         switch (sound_clip)
         {
         case 0:
-            sound_clip += sound(196, 170, 100); // ソ
+            sound_clip += soundUnsync(196, 170, 100); // ソ
             break;
         case 1:
-            sound_clip += sound(262, 170, 100); // ド
+            sound_clip += soundUnsync(262, 170, 100); // ド
             break;
         case 2:
-            sound_clip += sound(330, 170, 100); // ミ
+            sound_clip += soundUnsync(330, 170, 100); // ミ
             break;
         case 3:
-            sound_clip += sound(392, 170, 100); // ソ
+            sound_clip += soundUnsync(392, 170, 100); // ソ
             break;
         case 4:
-            sound_clip += sound(523, 170, 100); // ド
+            sound_clip += soundUnsync(523, 170, 100); // ド
             break;
         case 5:
-            sound_clip += sound(659, 170, 100); // ミ
+            sound_clip += soundUnsync(659, 170, 100); // ミ
             break;
         case 6:
-            sound_clip += sound(784, 510, 100); // ソ
+            sound_clip += soundUnsync(784, 510, 100); // ソ
             break;
         case 7:
-            sound_clip += sound(659, 510, 100); // ミ
+            sound_clip += soundUnsync(659, 510, 100); // ミ
             break;
         case 8:
-            sound_clip += sound(208, 170, 100); // ラ♭
+            sound_clip += soundUnsync(208, 170, 100); // ラ♭
             break;
         case 9:
-            sound_clip += sound(262, 170, 100); // ド
+            sound_clip += soundUnsync(262, 170, 100); // ド
             break;
         case 10:
-            sound_clip += sound(311, 170, 100); // ミ♭
+            sound_clip += soundUnsync(311, 170, 100); // ミ♭
             break;
         case 11:
-            sound_clip += sound(415, 170, 100); // ラ♭
+            sound_clip += soundUnsync(415, 170, 100); // ラ♭
             break;
         case 12:
-            sound_clip += sound(523, 170, 100); // ド
+            sound_clip += soundUnsync(523, 170, 100); // ド
             break;
         case 13:
-            sound_clip += sound(622, 170, 100); // ミ♭♭
+            sound_clip += soundUnsync(622, 170, 100); // ミ♭♭
             break;
         case 14:
-            sound_clip += sound(831, 510, 100); // ラ♭
+            sound_clip += soundUnsync(831, 510, 100); // ラ♭
             break;
         case 15:
-            sound_clip += sound(622, 510, 100); // ミ
+            sound_clip += soundUnsync(622, 510, 100); // ミ
             break;
         case 16:
-            sound_clip += sound(233, 170, 100); // シ
+            sound_clip += soundUnsync(233, 170, 100); // シ
             break;
         case 17:
-            sound_clip += sound(294, 170, 100); // レ
+            sound_clip += soundUnsync(294, 170, 100); // レ
             break;
         case 18:
-            sound_clip += sound(349, 170, 100); // ファ
+            sound_clip += soundUnsync(349, 170, 100); // ファ
             break;
         case 19:
-            sound_clip += sound(466, 170, 100); // シ♭
+            sound_clip += soundUnsync(466, 170, 100); // シ♭
             break;
         case 20:
-            sound_clip += sound(587, 170, 100); // レ
+            sound_clip += soundUnsync(587, 170, 100); // レ
             break;
         case 21:
-            sound_clip += sound(698, 170, 100); // ファ
+            sound_clip += soundUnsync(698, 170, 100); // ファ
             break;
         case 22:
-            sound_clip += sound(932, 510 - 85, 100); // シ♭
+            sound_clip += soundUnsync(932, 510 - 85, 100); // シ♭
             break;
         case 23:
-            sound_clip += sound(932, 85, 0); // 休符
+            sound_clip += soundUnsync(932, 85, 0); // 休符
             break;
         case 24:
-            sound_clip += sound(932, 170, 100); // シ♭
+            sound_clip += soundUnsync(932, 170, 100); // シ♭
             break;
         case 25:
-            sound_clip += sound(932, 85, 0); // 休符
+            sound_clip += soundUnsync(932, 85, 0); // 休符
             break;
         case 26:
-            sound_clip += sound(932, 85, 100); // シ♭
+            sound_clip += soundUnsync(932, 85, 100); // シ♭
             break;
         case 27:
-            sound_clip += sound(932, 85, 0); // 休符
+            sound_clip += soundUnsync(932, 85, 0); // 休符
             break;
         case 28:
-            sound_clip += sound(932, 85, 100); // シ♭
+            sound_clip += soundUnsync(932, 85, 100); // シ♭
             break;
         case 29:
-            sound_clip += sound(932, 85, 0); // 休符
+            sound_clip += soundUnsync(932, 85, 0); // 休符
             break;
         case 30:
-            sound_clip += sound(1047, 2040, 100); // ド
+            sound_clip += soundUnsync(1047, 2040, 100); // ド
             break;
         default:
             sound_flag = 1;
